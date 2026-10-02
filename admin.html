@@ -253,13 +253,16 @@ onclick="openModal('giornataModal')">
 
 </div>
 
-<table>
 <thead>
 <tr>
 <th>Data</th>
 <th>Sede</th>
-<th>Prestazione</th>
+<th>Specialista</th>
 <th>Orario</th>
+<th>Disponibili</th>
+<th>Prenotati</th>
+<th>Stato</th>
+<th>Azioni</th>
 </tr>
 </thead>
 
@@ -367,7 +370,58 @@ onclick="openModal('specialistaModal')">
 
 </main>
 
+<!-- =========================================================
+     MODALE DETTAGLIO GIORNATA
+     ========================================================= -->
 
+<div id="dettaglioGiornataModal" class="modal hidden">
+
+<div class="modal-box" style="max-width:850px">
+
+<div class="section-title">
+
+<div>
+<h2 id="dettaglioGiornataTitolo">
+Dettaglio giornata
+</h2>
+
+<p
+id="dettaglioGiornataInfo"
+class="muted">
+</p>
+</div>
+
+<button
+class="secondary"
+onclick="closeModal('dettaglioGiornataModal')">
+Chiudi
+</button>
+
+</div>
+
+
+<div style="overflow-x:auto">
+
+<table>
+
+<thead>
+<tr>
+<th>Ora</th>
+<th>Stato slot</th>
+<th>Paziente</th>
+<th>Contatti</th>
+</tr>
+</thead>
+
+<tbody id="dettaglioSlotTable">
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+</div>
 <!-- MODALE SEDE -->
 
 <div id="sedeModal" class="modal hidden">
@@ -551,7 +605,7 @@ let specialisti = [];
 let prestazioni = [];
 let disponibilita = [];
 let slots = [];
-
+let prenotazioni = [];
 
 /* ============================================================
    API
@@ -802,11 +856,11 @@ async function loadDashboard(){
     ]);
 
 
-    const prenotazioni =
-      await api(
-        "prenotazioni",
-        "select=id,slot_id,nome,cognome,email,telefono,stato,created_at&order=created_at.desc"
-      );
+    prenotazioni =
+  await api(
+    "prenotazioni",
+    "select=id,slot_id,nome,cognome,email,telefono,stato,created_at&order=created_at.desc"
+  );
 
 
     renderStats(
@@ -818,7 +872,275 @@ async function loadDashboard(){
     renderSpecialisti();
 
     renderGiornate();
+async function apriGiornata(
+  disponibilitaId
+){
 
+  const giornata =
+    disponibilita.find(
+      d =>
+        d.id === disponibilitaId
+    );
+
+
+  if(!giornata){
+    return;
+  }
+
+
+  const sede =
+    sedi.find(
+      s =>
+        s.id === giornata.sede_id
+    );
+
+
+  const specialista =
+    specialisti.find(
+      s =>
+        s.id === giornata.specialista_id
+    );
+
+
+  document
+    .querySelector(
+      '#dettaglioGiornataTitolo'
+    )
+    .textContent =
+      `Ambulatorio del ${formatDate(giornata.data)}`;
+
+
+  document
+    .querySelector(
+      '#dettaglioGiornataInfo'
+    )
+    .textContent =
+
+      `${sede?.nome || "Sede non indicata"} · ` +
+
+      `${
+        specialista
+        ? specialista.nome +
+          " " +
+          specialista.cognome
+        : "Specialista non indicato"
+      }`;
+
+
+  const slotGiornata =
+    slots
+
+    .filter(
+      s =>
+        s.disponibilita_id ===
+        disponibilitaId
+    )
+
+    .sort(
+      (a,b) =>
+        new Date(a.data_ora) -
+        new Date(b.data_ora)
+    );
+
+
+  const tbody =
+    document.querySelector(
+      '#dettaglioSlotTable'
+    );
+
+
+  tbody.innerHTML =
+
+    slotGiornata.map(slot => {
+
+
+      /*
+       * Potrebbero esistere più prenotazioni
+       * storiche sullo stesso slot.
+       *
+       * Mostriamo quella attualmente confermata.
+       */
+
+      const prenotazione =
+        prenotazioni.find(
+          p =>
+            p.slot_id === slot.id &&
+            p.stato === "confermata"
+        );
+
+
+      const data =
+        new Date(
+          slot.data_ora
+        );
+
+
+      const ora =
+        data.toLocaleTimeString(
+          "it-IT",
+          {
+            hour:
+              "2-digit",
+
+            minute:
+              "2-digit",
+
+            timeZone:
+              "Europe/Rome"
+          }
+        );
+
+
+      return `
+
+<tr>
+
+<td>
+<strong>
+${ora}
+</strong>
+</td>
+
+
+<td>
+
+<span class="badge">
+
+${escapeHtml(slot.stato)}
+
+</span>
+
+</td>
+
+
+<td>
+
+${
+  prenotazione
+
+  ? escapeHtml(
+      `${prenotazione.nome} ${prenotazione.cognome}`
+    )
+
+  : "—"
+}
+
+</td>
+
+
+<td>
+
+${
+  prenotazione
+
+  ? `
+      ${escapeHtml(
+        prenotazione.telefono || "—"
+      )}
+
+      <br>
+
+      <small>
+      ${escapeHtml(
+        prenotazione.email
+      )}
+      </small>
+    `
+
+  : "—"
+}
+
+</td>
+
+</tr>
+
+`;
+
+    }).join("");
+
+
+  openModal(
+    'dettaglioGiornataModal'
+  );
+
+}
+    async function cambiaStatoGiornata(
+  disponibilitaId,
+  nuovoStato
+){
+
+  const messaggio =
+    nuovoStato
+
+    ? "Vuoi riattivare questa giornata?"
+
+    : "Vuoi disattivare questa giornata? Gli slot non saranno più prenotabili.";
+
+
+  if(
+    !confirm(messaggio)
+  ){
+    return;
+  }
+
+
+  try{
+
+    const response =
+      await fetch(
+
+        `${SUPABASE_URL}/rest/v1/rpc/imposta_stato_giornata`,
+
+        {
+
+          method:
+            "POST",
+
+          headers:
+            authHeaders(),
+
+          body:
+            JSON.stringify({
+
+              p_disponibilita_id:
+                disponibilitaId,
+
+              p_attiva:
+                nuovoStato
+
+            })
+
+        }
+
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if(!response.ok){
+
+      throw new Error(
+        result.message ||
+        "Operazione non riuscita"
+      );
+
+    }
+
+
+    await loadDashboard();
+
+
+  }catch(error){
+
+    alert(
+      error.message
+    );
+
+  }
+
+}
     renderPrenotazioni(
       prenotazioni
     );
@@ -955,37 +1277,96 @@ ${escapeHtml(s.email || "—")}
 
 function renderGiornate(){
 
-  document.querySelector('#giornateTable')
-  .innerHTML =
+  const tbody =
+    document.querySelector('#giornateTable');
 
-    disponibilita.map(
-      d => {
 
-        const sede =
-          sedi.find(
-            x => x.id === d.sede_id
-          );
+  if(!disponibilita.length){
 
-        const prestazione =
-          prestazioni.find(
-            x => x.id === d.prestazione_id
-          );
+    tbody.innerHTML = `
 
-        return `
+      <tr>
+        <td colspan="8">
+          Nessuna giornata ambulatoriale presente.
+        </td>
+      </tr>
+
+    `;
+
+    return;
+  }
+
+
+  tbody.innerHTML =
+
+    disponibilita.map(d => {
+
+      const sede =
+        sedi.find(
+          x => x.id === d.sede_id
+        );
+
+
+      const specialista =
+        specialisti.find(
+          x => x.id === d.specialista_id
+        );
+
+
+      const slotGiornata =
+        slots.filter(
+          s =>
+            s.disponibilita_id === d.id
+        );
+
+
+      const disponibili =
+        slotGiornata.filter(
+          s => s.stato === "disponibile"
+        ).length;
+
+
+      /*
+       * Contiamo gli slot effettivamente prenotati.
+       * Non le vecchie prenotazioni annullate.
+       */
+
+      const prenotati =
+        slotGiornata.filter(
+          s => s.stato === "prenotato"
+        ).length;
+
+
+      return `
 
 <tr>
 
 <td>
+<strong>
 ${formatDate(d.data)}
+</strong>
 </td>
 
-<td>
-${escapeHtml(sede?.nome || "—")}
-</td>
 
 <td>
-${escapeHtml(prestazione?.nome || "—")}
+${escapeHtml(
+  sede?.nome || "—"
+)}
 </td>
+
+
+<td>
+
+${
+  specialista
+  ? escapeHtml(
+      `${specialista.nome} ${specialista.cognome}`
+    )
+  : "—"
+}
+
+</td>
+
 
 <td>
 ${d.ora_inizio.slice(0,5)}
@@ -993,11 +1374,82 @@ ${d.ora_inizio.slice(0,5)}
 ${d.ora_fine.slice(0,5)}
 </td>
 
+
+<td>
+
+<span class="badge">
+
+${disponibili}
+
+</span>
+
+</td>
+
+
+<td>
+
+<span class="badge">
+
+${prenotati}
+
+</span>
+
+</td>
+
+
+<td>
+
+<span class="badge">
+
+${d.attiva
+  ? "Attiva"
+  : "Disattivata"}
+
+</span>
+
+</td>
+
+
+<td>
+
+<div class="top-actions">
+
+<button
+class="secondary"
+onclick="apriGiornata('${d.id}')">
+
+Dettaglio
+
+</button>
+
+
+<button
+class="${d.attiva ? 'danger' : 'primary'}"
+
+onclick="
+cambiaStatoGiornata(
+  '${d.id}',
+  ${!d.attiva}
+)
+">
+
+${d.attiva
+  ? "Disattiva"
+  : "Riattiva"}
+
+</button>
+
+</div>
+
+</td>
+
 </tr>
 
 `;
 
-      }
+    }).join("");
+
+}
 
     ).join("");
 
