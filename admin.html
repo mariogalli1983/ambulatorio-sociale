@@ -882,6 +882,38 @@ Annulla
 
 
 
+
+<!-- =========================================================
+     MODALE PROGRAMMA SPECIALISTA
+     ========================================================= -->
+<div id="programmaModal" class="modal hidden">
+  <div class="modal-box" style="max-width:850px">
+    <div id="programmaStampabile">
+      <h2>Ambulatorio Sociale – Programma visite</h2>
+      <p id="programmaInfo" class="muted"></p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Ora</th>
+              <th>Appuntamento</th>
+            </tr>
+          </thead>
+          <tbody id="programmaTable"></tbody>
+        </table>
+      </div>
+
+      <p><strong id="programmaTotale"></strong></p>
+    </div>
+
+    <div class="top-actions" style="margin-top:18px">
+      <button class="primary" onclick="stampaProgramma()">Stampa / Salva PDF</button>
+      <button class="secondary" onclick="closeModal('programmaModal')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALE MODIFICA GIORNATA -->
 <div id="modificaGiornataModal" class="modal hidden"><div class="modal-box">
 <h2>Modifica giornata ambulatoriale</h2>
@@ -1571,6 +1603,15 @@ function renderGiornate(){
 
               <button
                 class="secondary"
+                onclick="apriProgramma('${d.id}')">
+
+                Programma
+
+              </button>
+
+
+              <button
+                class="secondary"
                 onclick="apriGiornata('${d.id}')">
 
                 Dettaglio
@@ -1611,6 +1652,101 @@ function renderGiornate(){
 
 }
 
+
+
+/* ============================================================
+   PROGRAMMA SPECIALISTA
+   ============================================================ */
+function apriProgramma(disponibilitaId){
+
+  const g=disponibilita.find(d=>d.id===disponibilitaId);
+  if(!g){
+    alert("Giornata non trovata.");
+    return;
+  }
+
+  const sede=sedi.find(s=>s.id===g.sede_id);
+  const specialista=specialisti.find(s=>s.id===g.specialista_id);
+
+  const slotGiornata=slots
+    .filter(s=>s.disponibilita_id===disponibilitaId)
+    .sort((a,b)=>new Date(a.data_ora)-new Date(b.data_ora));
+
+  let totale=0;
+
+  document.querySelector('#programmaInfo').innerHTML=
+    `<strong>Data:</strong> ${escapeHtml(formatDate(g.data))}<br>`+
+    `<strong>Sede:</strong> ${escapeHtml(sede?.nome || "—")}<br>`+
+    `<strong>Specialista:</strong> ${escapeHtml(specialista ? specialista.nome+" "+specialista.cognome : "—")}`;
+
+  document.querySelector('#programmaTable').innerHTML=
+    slotGiornata.map(slot=>{
+      const ora=new Date(slot.data_ora).toLocaleTimeString(
+        "it-IT",
+        {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Rome"}
+      );
+
+      const p=prenotazioni.find(
+        x=>x.slot_id===slot.id && x.stato==="confermata"
+      );
+
+      let appuntamento="LIBERO";
+
+      if(p){
+        totale++;
+        appuntamento=escapeHtml(`${p.nome} ${p.cognome}`);
+      }else if(slot.stato==="bloccato"){
+        appuntamento="BLOCCATO";
+      }else if(slot.stato==="prenotato"){
+        appuntamento="PRENOTATO";
+      }
+
+      return `<tr><td><strong>${ora}</strong></td><td>${appuntamento}</td></tr>`;
+    }).join("");
+
+  document.querySelector('#programmaTotale').textContent=
+    `Totale visite confermate: ${totale}`;
+
+  openModal('programmaModal');
+}
+
+
+function stampaProgramma(){
+
+  const contenuto=document.querySelector('#programmaStampabile').innerHTML;
+
+  const w=window.open("","_blank");
+
+  if(!w){
+    alert("Il browser ha bloccato la finestra di stampa. Consenti i popup per questo sito e riprova.");
+    return;
+  }
+
+  w.document.write(`<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Programma visite – Ambulatorio Sociale</title>
+<style>
+body{font-family:Arial,sans-serif;color:#17202a;margin:35px}
+h2{margin-bottom:8px}
+p{line-height:1.5}
+table{width:100%;border-collapse:collapse;margin-top:22px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #ddd}
+th{font-size:13px;color:#555}
+@media print{
+  body{margin:18mm}
+}
+</style>
+</head>
+<body>${contenuto}</body>
+</html>`);
+
+  w.document.close();
+  w.focus();
+
+  setTimeout(()=>w.print(),250);
+}
 
 
 /* ============================================================
