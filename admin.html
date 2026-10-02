@@ -600,6 +600,7 @@ Chiudi
 <th>Stato slot</th>
 <th>Paziente</th>
 <th>Contatti</th>
+<th>Azioni</th>
 
 </tr>
 
@@ -1598,81 +1599,54 @@ function renderGiornate(){
    DETTAGLIO GIORNATA
    ============================================================ */
 
-function apriGiornata(
-  disponibilitaId
-){
+function apriGiornata(disponibilitaId){
 
   const giornata =
     disponibilita.find(
-      d =>
-        d.id === disponibilitaId
+      d => d.id === disponibilitaId
     );
-
 
   if(!giornata){
 
-    alert(
-      "Giornata non trovata."
-    );
+    alert("Giornata non trovata.");
 
     return;
-
   }
 
 
   const sede =
     sedi.find(
-      s =>
-        s.id === giornata.sede_id
+      s => s.id === giornata.sede_id
     );
 
 
   const specialista =
     specialisti.find(
-      s =>
-        s.id === giornata.specialista_id
+      s => s.id === giornata.specialista_id
     );
 
 
   document
-    .querySelector(
-      '#dettaglioGiornataTitolo'
-    )
+    .querySelector('#dettaglioGiornataTitolo')
     .textContent =
-
-      `Ambulatorio del ${
-        formatDate(giornata.data)
-      }`;
+      `Ambulatorio del ${formatDate(giornata.data)}`;
 
 
   document
-    .querySelector(
-      '#dettaglioGiornataInfo'
-    )
+    .querySelector('#dettaglioGiornataInfo')
     .textContent =
-
-      `${
-        sede?.nome ||
-        "Sede non indicata"
-      } · ${
+      `${sede?.nome || "Sede non indicata"} · ${
         specialista
-          ? specialista.nome +
-            " " +
-            specialista.cognome
+          ? specialista.nome + " " + specialista.cognome
           : "Specialista non indicato"
       }`;
 
 
   const slotGiornata =
-
     slots
-
       .filter(
-        s =>
-          s.disponibilita_id ===
-          disponibilitaId
+        s => s.disponibilita_id === disponibilitaId
       )
-
       .sort(
         (a,b) =>
           new Date(a.data_ora) -
@@ -1681,9 +1655,7 @@ function apriGiornata(
 
 
   const tbody =
-    document.querySelector(
-      '#dettaglioSlotTable'
-    );
+    document.querySelector('#dettaglioSlotTable');
 
 
   if(!slotGiornata.length){
@@ -1691,155 +1663,288 @@ function apriGiornata(
     tbody.innerHTML = `
 
       <tr>
-
-        <td colspan="4">
+        <td colspan="5">
           Nessuno slot presente per questa giornata.
         </td>
-
       </tr>
 
     `;
 
-
-    openModal(
-      'dettaglioGiornataModal'
-    );
-
+    openModal('dettaglioGiornataModal');
 
     return;
-
   }
 
 
   tbody.innerHTML =
-
-    slotGiornata.map(
-      slot => {
+    slotGiornata.map(slot => {
 
 
-        const prenotazione =
-
-          prenotazioni.find(
-            p =>
-              p.slot_id === slot.id &&
-              p.stato === "confermata"
-          );
-
-
-        const data =
-          new Date(
-            slot.data_ora
-          );
+      const prenotazione =
+        prenotazioni.find(
+          p =>
+            p.slot_id === slot.id &&
+            p.stato === "confermata"
+        );
 
 
-        const ora =
-          data.toLocaleTimeString(
-
-            "it-IT",
-
-            {
-
-              hour:
-                "2-digit",
-
-              minute:
-                "2-digit",
-
-              timeZone:
-                "Europe/Rome"
-
-            }
-
-          );
+      const data =
+        new Date(slot.data_ora);
 
 
-        return `
-
-          <tr>
-
-            <td>
-
-              <strong>
-                ${ora}
-              </strong>
-
-            </td>
+      const ora =
+        data.toLocaleTimeString(
+          "it-IT",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Rome"
+          }
+        );
 
 
-            <td>
+      /*
+       * AZIONE DISPONIBILE SULLO SLOT
+       *
+       * disponibile -> Blocca
+       * bloccato    -> Sblocca
+       * prenotato   -> nessuna azione
+       */
 
-              <span class="badge">
-
-                ${escapeHtml(
-                  slot.stato
-                )}
-
-              </span>
-
-            </td>
+      let azione = "—";
 
 
-            <td>
+      if(
+        slot.stato === "disponibile" &&
+        !prenotazione
+      ){
 
-              ${
-                prenotazione
+        azione = `
 
-                  ? escapeHtml(
-                      `${prenotazione.nome} ${prenotazione.cognome}`
-                    )
+          <button
+            class="danger"
+            onclick="cambiaStatoSlot(
+              '${slot.id}',
+              true,
+              '${disponibilitaId}'
+            )">
 
-                  : "—"
-              }
+            Blocca
 
-            </td>
-
-
-            <td>
-
-              ${
-                prenotazione
-
-                  ? `
-
-                    ${escapeHtml(
-                      prenotazione.telefono ||
-                      "—"
-                    )}
-
-                    <br>
-
-                    <small>
-
-                      ${escapeHtml(
-                        prenotazione.email ||
-                        "—"
-                      )}
-
-                    </small>
-
-                  `
-
-                  : "—"
-              }
-
-            </td>
-
-          </tr>
+          </button>
 
         `;
 
       }
 
-    ).join("");
+
+      if(
+        slot.stato === "bloccato" &&
+        !prenotazione
+      ){
+
+        azione = `
+
+          <button
+            class="primary"
+            onclick="cambiaStatoSlot(
+              '${slot.id}',
+              false,
+              '${disponibilitaId}'
+            )">
+
+            Sblocca
+
+          </button>
+
+        `;
+
+      }
 
 
-  openModal(
-    'dettaglioGiornataModal'
-  );
+      return `
+
+        <tr>
+
+          <td>
+            <strong>
+              ${ora}
+            </strong>
+          </td>
+
+
+          <td>
+
+            <span class="badge">
+              ${escapeHtml(slot.stato)}
+            </span>
+
+          </td>
+
+
+          <td>
+
+            ${
+              prenotazione
+
+                ? escapeHtml(
+                    `${prenotazione.nome} ${prenotazione.cognome}`
+                  )
+
+                : "—"
+            }
+
+          </td>
+
+
+          <td>
+
+            ${
+              prenotazione
+
+                ? `
+                    ${escapeHtml(
+                      prenotazione.telefono || "—"
+                    )}
+
+                    <br>
+
+                    <small>
+                      ${escapeHtml(
+                        prenotazione.email || "—"
+                      )}
+                    </small>
+                  `
+
+                : "—"
+            }
+
+          </td>
+
+
+          <td>
+            ${azione}
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join("");
+
+
+  openModal('dettaglioGiornataModal');
 
 }
+/* ============================================================
+   BLOCCA / SBLOCCA SINGOLO SLOT
+   ============================================================ */
+
+async function cambiaStatoSlot(
+  slotId,
+  blocca,
+  disponibilitaId
+){
+
+  const messaggio =
+    blocca
+
+      ? "Vuoi bloccare questo orario? Non sarà più prenotabile dal sito."
+
+      : "Vuoi rendere nuovamente disponibile questo orario?";
 
 
+  if(!confirm(messaggio)){
+    return;
+  }
+
+
+  try{
+
+    const response =
+      await fetch(
+
+        `${SUPABASE_URL}/rest/v1/rpc/imposta_stato_slot`,
+
+        {
+
+          method: "POST",
+
+          headers:
+            authHeaders(),
+
+          body:
+            JSON.stringify({
+
+              p_slot_id:
+                slotId,
+
+              p_bloccato:
+                blocca
+
+            })
+
+        }
+
+      );
+
+
+    let result = null;
+
+
+    try{
+
+      result =
+        await response.json();
+
+    }catch(e){
+
+      result = null;
+
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+
+        result?.message ||
+        result?.error ||
+        "Operazione non riuscita"
+
+      );
+
+    }
+
+
+    /*
+     * Ricarichiamo i dati dal database.
+     */
+
+    await loadDashboard();
+
+
+    /*
+     * Riapriamo automaticamente
+     * il dettaglio della stessa giornata.
+     */
+
+    apriGiornata(
+      disponibilitaId
+    );
+
+
+  }catch(error){
+
+    console.error(error);
+
+    alert(
+      error.message
+    );
+
+  }
+
+}
 
 /* ============================================================
    ATTIVA / DISATTIVA GIORNATA
