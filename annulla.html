@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Annulla prenotazione | Ambulatorio Sociale</title>
+
+<style>
+:root{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  color:#17202a;
+  background:#f7f9f9
+}
+
+*{box-sizing:border-box}
+
+body{margin:0}
+
+header,footer{
+  background:#fff;
+  border-bottom:1px solid #e5e7eb
+}
+
+nav,.footer-inner,main{
+  max-width:760px;
+  margin:auto;
+  padding:18px 22px
+}
+
+nav{
+  display:flex;
+  align-items:center;
+  gap:20px
+}
+
+.brand{
+  font-weight:800;
+  margin-right:auto
+}
+
+a{color:#126e61}
+
+main{
+  padding-top:60px;
+  padding-bottom:80px
+}
+
+.card{
+  background:white;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:28px;
+}
+
+h1{
+  margin-top:0;
+}
+
+.notice{
+  padding:15px;
+  margin:20px 0;
+  border-radius:10px;
+  background:#eef7f5
+}
+
+.error{
+  background:#fff0f0;
+  color:#8a1c1c
+}
+
+.success{
+  background:#edf9f0;
+  color:#176b35
+}
+
+button{
+  border:0;
+  border-radius:9px;
+  background:#b42318;
+  color:white;
+  padding:13px 19px;
+  font-weight:750;
+  font-size:1rem;
+  cursor:pointer
+}
+
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed
+}
+
+.footer-inner{
+  display:flex;
+  flex-wrap:wrap;
+  gap:18px
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<nav>
+<span class="brand">Ambulatorio Sociale</span>
+<a href="index.html">Home</a>
+<a href="prenota.html">Prenota</a>
+</nav>
+</header>
+
+<main>
+
+<div class="card">
+
+<h1>Annulla prenotazione</h1>
+
+<p>
+Da questa pagina puoi annullare l'appuntamento associato
+al link ricevuto al momento della prenotazione.
+</p>
+
+<div id="message" class="notice">
+Verifica del collegamento…
+</div>
+
+<button id="cancelButton" disabled>
+Annulla definitivamente l'appuntamento
+</button>
+
+</div>
+
+</main>
+
+<footer>
+<div class="footer-inner">
+<a href="privacy.html">Privacy</a>
+<a href="cookie.html">Cookie</a>
+<a href="termini.html">Termini</a>
+<a href="disclaimer.html">Disclaimer</a>
+</div>
+</footer>
+
+<script>
+
+const SUPABASE_URL =
+"https://tsnpjkcubrzlxmremqbx.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_WlOXmDGGtulKr1OOsDlEWg_TEoaLpDz";
+
+const headers = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`
+};
+
+const params =
+  new URLSearchParams(window.location.search);
+
+const code =
+  params.get('code');
+
+const message =
+  document.querySelector('#message');
+
+const button =
+  document.querySelector('#cancelButton');
+
+
+if(!code){
+
+  message.className = 'notice error';
+
+  message.textContent =
+    'Il link di annullamento non è valido.';
+
+}else{
+
+  message.textContent =
+    'Link riconosciuto. Se desideri rinunciare alla visita, premi il pulsante qui sotto.';
+
+  button.disabled = false;
+
+}
+
+
+button.addEventListener('click', async ()=>{
+
+  const conferma = window.confirm(
+    'Vuoi davvero annullare questo appuntamento? Lo slot tornerà disponibile per un’altra persona.'
+  );
+
+  if(!conferma)
+    return;
+
+  button.disabled = true;
+
+  message.className = 'notice';
+
+  message.textContent =
+    'Annullamento in corso…';
+
+  try{
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/annulla_prenotazione`,
+      {
+        method:'POST',
+
+        headers:{
+          ...headers,
+          'Content-Type':'application/json'
+        },
+
+        body:JSON.stringify({
+          p_codice:code
+        })
+      }
+    );
+
+    const result =
+      await response.json();
+
+    if(!response.ok){
+
+      throw new Error(
+        result.message ||
+        'Non è stato possibile annullare la prenotazione.'
+      );
+
+    }
+
+    message.className =
+      'notice success';
+
+    if(result.gia_annullata){
+
+      message.innerHTML =
+        '<strong>Questa prenotazione era già stata annullata.</strong>';
+
+    }else{
+
+      message.innerHTML =
+        '<strong>Prenotazione annullata.</strong><br><br>' +
+        'L’appuntamento è stato liberato correttamente.';
+
+    }
+
+    button.style.display =
+      'none';
+
+  }catch(error){
+
+    message.className =
+      'notice error';
+
+    message.textContent =
+      error.message;
+
+    button.disabled =
+      false;
+
+  }
+
+});
+
+</script>
+
+</body>
+</html>
