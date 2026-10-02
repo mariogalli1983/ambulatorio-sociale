@@ -1,1 +1,660 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prenota | Ambulatorio Sociale</title><link rel="stylesheet" href="assets/style.css"></head><body><header><nav><span class="brand">Ambulatorio Sociale</span><a href="index.html">Home</a><a href="prenota.html">Prenota</a></nav></header><main><h1>Prenota una visita</h1><p class="lead">Compila i campi. Le informazioni cliniche richieste sono ridotte al minimo e servono esclusivamente a indirizzare correttamente la richiesta.</p><div id="demo-note" class="status">Modalità dimostrativa: sedi e orari saranno caricati dal backend quando verrà collegato.</div><form id="booking"><div class="grid"><div class="field"><label for="first_name">Nome</label><input id="first_name" name="first_name" autocomplete="given-name" required></div><div class="field"><label for="last_name">Cognome</label><input id="last_name" name="last_name" autocomplete="family-name" required></div><div class="field"><label for="birth_date">Data di nascita</label><input id="birth_date" name="birth_date" type="date" required></div><div class="field"><label for="phone">Telefono</label><input id="phone" name="phone" type="tel" autocomplete="tel" required></div></div><div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div><div class="field"><label for="service">Prestazione</label><select id="service" name="service_id" required><option>Neurochirurgia — esempio</option></select></div><div class="field"><label for="symptom">Motivo principale della visita</label><select id="symptom" name="symptom" required><option value="">Seleziona</option><option>Mal di schiena / lombalgia</option><option>Dolore cervicale / cervicalgia</option><option>Sciatalgia</option><option>Formicolii o perdita di sensibilità</option><option>Dolore agli arti</option><option>Problema già diagnosticato alla colonna</option><option>Valutazione di esami o referti</option><option>Altro</option></select></div><div class="field"><label for="diagnosed">Hai già una diagnosi relativa a questo problema?</label><select id="diagnosed" name="diagnosed"><option value="no">No</option><option value="yes">Sì</option></select></div><div class="field"><label for="diagnosis">Se sì, indicazione sintetica (facoltativa)</label><textarea id="diagnosis" name="diagnosis" maxlength="500" placeholder="Non inserire referti completi o informazioni non necessarie."></textarea></div><div class="field"><label for="location">Sede</label><select id="location" name="location_id" required><option>San Giustino — esempio</option></select></div><div class="field"><label for="slot">Data e ora</label><select id="slot" name="slot_id" required><option>Da configurare</option></select></div><div class="notice"><strong>Privacy.</strong> Prima di inviare, consulta l'<a href="privacy.html" target="_blank">informativa sul trattamento dei dati personali</a>. I dati relativi alla salute richiedono particolare tutela e saranno accessibili solo ai soggetti autorizzati secondo il ruolo.</div><div class="field check"><input id="privacy_ack" name="privacy_ack" value="yes" type="checkbox" required><label for="privacy_ack">Dichiaro di aver letto l'informativa privacy relativa al servizio di prenotazione.</label></div><div class="field check"><input id="terms_ack" name="terms_ack" value="yes" type="checkbox" required><label for="terms_ack">Dichiaro di aver letto i <a href="termini.html" target="_blank">termini del servizio</a> e il <a href="disclaimer.html" target="_blank">disclaimer sanitario</a>.</label></div><button class="btn" type="submit">Conferma prenotazione</button><div id="status"></div></form></main><footer><div class="footer-inner"><a href="privacy.html">Privacy</a><a href="cookie.html">Cookie</a><a href="termini.html">Termini</a><a href="disclaimer.html">Disclaimer</a></div></footer><script src="assets/app.js"></script></body></html>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Prenota | Ambulatorio Sociale</title>
+
+<style>
+:root{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  color:#17202a;
+  background:#f7f9f9
+}
+
+*{box-sizing:border-box}
+body{margin:0}
+
+header,footer{
+  background:#fff;
+  border-bottom:1px solid #e5e7eb
+}
+
+nav,.footer-inner,main{
+  max-width:900px;
+  margin:auto;
+  padding:18px 22px
+}
+
+nav{
+  display:flex;
+  gap:22px;
+  align-items:center
+}
+
+.brand{
+  font-weight:800;
+  margin-right:auto
+}
+
+a{color:#126e61}
+
+main{
+  padding-top:38px;
+  padding-bottom:60px
+}
+
+h1{
+  font-size:2.2rem;
+  margin-bottom:8px
+}
+
+.lead{color:#52606d}
+
+.status,.notice{
+  padding:14px;
+  border-radius:10px;
+  background:#eef7f5;
+  margin:18px 0
+}
+
+.error{
+  background:#fff0f0;
+  color:#8a1c1c
+}
+
+.success{
+  background:#edf9f0;
+  color:#176b35
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px
+}
+
+.field{margin:15px 0}
+
+label{
+  display:block;
+  font-weight:650;
+  margin-bottom:6px
+}
+
+input,select,textarea{
+  width:100%;
+  padding:12px;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:white;
+  font:inherit
+}
+
+textarea{min-height:90px}
+
+.check{
+  display:flex;
+  gap:10px;
+  align-items:flex-start
+}
+
+.check input{
+  width:auto;
+  margin-top:5px
+}
+
+.check label{font-weight:400}
+
+.btn{
+  border:0;
+  border-radius:9px;
+  background:#126e61;
+  color:white;
+  padding:13px 19px;
+  font-weight:750;
+  font-size:1rem;
+  cursor:pointer
+}
+
+.btn:disabled{
+  opacity:.5;
+  cursor:not-allowed
+}
+
+.footer-inner{
+  display:flex;
+  gap:18px;
+  flex-wrap:wrap
+}
+
+@media(max-width:650px){
+  .grid{grid-template-columns:1fr}
+  nav{flex-wrap:wrap}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<nav>
+  <span class="brand">Ambulatorio Sociale</span>
+  <a href="index.html">Home</a>
+  <a href="prenota.html">Prenota</a>
+</nav>
+</header>
+
+<main>
+
+<h1>Prenota una visita</h1>
+
+<p class="lead">
+Scegli prestazione, sede e uno degli appuntamenti effettivamente disponibili.
+</p>
+
+<div id="connection" class="status">
+Connessione al calendario in corso…
+</div>
+
+<form id="booking">
+
+<div class="grid">
+
+<div class="field">
+<label for="first_name">Nome</label>
+<input id="first_name" autocomplete="given-name" required>
+</div>
+
+<div class="field">
+<label for="last_name">Cognome</label>
+<input id="last_name" autocomplete="family-name" required>
+</div>
+
+<div class="field">
+<label for="birth_date">Data di nascita</label>
+<input id="birth_date" type="date" required>
+</div>
+
+<div class="field">
+<label for="phone">Telefono</label>
+<input id="phone" type="tel" autocomplete="tel" required>
+</div>
+
+</div>
+
+<div class="field">
+<label for="email">Email</label>
+<input id="email" type="email" autocomplete="email" required>
+</div>
+
+<div class="field">
+<label for="service">Prestazione</label>
+
+<select id="service" required disabled>
+<option value="">Caricamento…</option>
+</select>
+
+</div>
+
+<div class="field">
+<label for="location">Sede</label>
+
+<select id="location" required disabled>
+<option value="">Prima scegli la prestazione</option>
+</select>
+
+</div>
+
+<div class="field">
+<label for="slot">Data e ora</label>
+
+<select id="slot" required disabled>
+<option value="">Prima scegli la sede</option>
+</select>
+
+</div>
+
+<div class="field">
+
+<label for="symptom">Motivo principale della visita</label>
+
+<select id="symptom" required>
+
+<option value="">Seleziona</option>
+<option>Mal di schiena / lombalgia</option>
+<option>Dolore cervicale / cervicalgia</option>
+<option>Sciatalgia</option>
+<option>Formicolii o perdita di sensibilità</option>
+<option>Dolore agli arti</option>
+<option>Problema già diagnosticato alla colonna</option>
+<option>Valutazione di esami o referti</option>
+<option>Altro</option>
+
+</select>
+
+</div>
+
+<div class="field">
+
+<label for="diagnosed">
+Hai già una diagnosi relativa a questo problema?
+</label>
+
+<select id="diagnosed">
+<option value="no">No</option>
+<option value="yes">Sì</option>
+</select>
+
+</div>
+
+<div class="field">
+
+<label for="diagnosis">
+Se sì, indicazione sintetica (facoltativa)
+</label>
+
+<textarea
+id="diagnosis"
+maxlength="500"
+placeholder="Non inserire referti completi o informazioni non necessarie.">
+</textarea>
+
+</div>
+
+<div class="notice">
+
+<strong>Privacy.</strong>
+
+Consulta l'
+<a href="privacy.html" target="_blank">
+informativa privacy
+</a>.
+
+Le informazioni sanitarie sono separate dai dati amministrativi di prenotazione.
+
+</div>
+
+<div class="field check">
+
+<input id="privacy_ack" type="checkbox" required>
+
+<label for="privacy_ack">
+Dichiaro di aver letto l'informativa privacy relativa al servizio di prenotazione.
+</label>
+
+</div>
+
+<div class="field check">
+
+<input id="terms_ack" type="checkbox" required>
+
+<label for="terms_ack">
+
+Dichiaro di aver letto i
+<a href="termini.html" target="_blank">termini</a>
+e il
+<a href="disclaimer.html" target="_blank">disclaimer sanitario</a>.
+
+</label>
+
+</div>
+
+<button
+id="submitBtn"
+class="btn"
+type="submit"
+disabled>
+
+Conferma prenotazione
+
+</button>
+
+<div id="formStatus"></div>
+
+</form>
+
+</main>
+
+<footer>
+
+<div class="footer-inner">
+
+<a href="privacy.html">Privacy</a>
+<a href="cookie.html">Cookie</a>
+<a href="termini.html">Termini</a>
+<a href="disclaimer.html">Disclaimer</a>
+
+</div>
+
+</footer>
+
+<script>
+
+/* =========================================================
+   COLLEGAMENTO SUPABASE
+   ========================================================= */
+
+const SUPABASE_URL =
+"https://tsnpjkcubrzlxmremqbx.supabase.co";
+
+/*
+IMPORTANTE:
+incolla qui SOLO la Publishable key.
+
+NON inserire:
+- Secret key
+- service_role
+- password database
+*/
+
+const SUPABASE_KEY =
+"sb_publishable_WlOXmDGGtulKr1OOsDlEWg_TEoaLpDz";
+
+
+const headers = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`
+};
+
+
+const service =
+document.querySelector('#service');
+
+const locationSel =
+document.querySelector('#location');
+
+const slotSel =
+document.querySelector('#slot');
+
+
+let availabilities = [];
+let slots = [];
+
+
+/* =========================================================
+   CHIAMATA API
+   ========================================================= */
+
+async function api(table, query='') {
+
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/${table}?${query}`,
+    {headers}
+  );
+
+  if(!r.ok)
+    throw new Error(`${table}: ${r.status}`);
+
+  return r.json();
+}
+
+
+/* =========================================================
+   FORMATO DATA ITALIANO
+   ========================================================= */
+
+function fmt(iso){
+
+  const d = new Date(iso);
+
+  return new Intl.DateTimeFormat(
+    'it-IT',
+    {
+      weekday:'short',
+      day:'2-digit',
+      month:'long',
+      hour:'2-digit',
+      minute:'2-digit',
+      timeZone:'Europe/Rome'
+    }
+  ).format(d);
+
+}
+
+
+/* =========================================================
+   CARICAMENTO DATI
+   ========================================================= */
+
+async function init(){
+
+try{
+
+  if(SUPABASE_KEY.includes('INCOLLA_QUI'))
+    throw new Error('Manca la Publishable key');
+
+
+  const [
+    services,
+    locations,
+    av,
+    sl
+  ] = await Promise.all([
+
+    api(
+      'prestazioni',
+      'select=id,nome&attiva=eq.true&order=nome'
+    ),
+
+    api(
+      'sedi',
+      'select=id,nome&attiva=eq.true&order=nome'
+    ),
+
+    api(
+      'disponibilita',
+      'select=id,sede_id,prestazione_id,data&attiva=eq.true&order=data'
+    ),
+
+    api(
+      'slot',
+      'select=id,disponibilita_id,data_ora&stato=eq.disponibile&order=data_ora'
+    )
+
+  ]);
+
+
+  availabilities = av;
+  slots = sl;
+
+  window._locations = locations;
+
+
+  service.innerHTML =
+    '<option value="">Seleziona la prestazione</option>' +
+
+    services.map(
+      x =>
+      `<option value="${x.id}">
+        ${x.nome}
+      </option>`
+    ).join('');
+
+
+  service.disabled = false;
+
+
+  document.querySelector('#connection')
+    .textContent =
+    'Calendario collegato. Gli orari mostrati provengono dal database.';
+
+
+}catch(e){
+
+  const el =
+    document.querySelector('#connection');
+
+  el.className = 'status error';
+
+  el.textContent =
+    'Impossibile caricare il calendario: ' +
+    e.message;
+
+}
+
+}
+
+
+/* =========================================================
+   PRESTAZIONE → SEDI
+   ========================================================= */
+
+service.addEventListener(
+'change',
+()=>{
+
+  const aids = new Set(
+
+    availabilities
+
+      .filter(
+        a =>
+        a.prestazione_id === service.value
+      )
+
+      .map(
+        a => a.sede_id
+      )
+
+  );
+
+
+  const locs =
+    (window._locations || [])
+
+    .filter(
+      l => aids.has(l.id)
+    );
+
+
+  locationSel.innerHTML =
+
+    '<option value="">Seleziona la sede</option>' +
+
+    locs.map(
+      x =>
+      `<option value="${x.id}">
+        ${x.nome}
+      </option>`
+    ).join('');
+
+
+  locationSel.disabled =
+    !service.value;
+
+
+  slotSel.disabled = true;
+
+  slotSel.innerHTML =
+    '<option value="">Prima scegli la sede</option>';
+
+
+  document.querySelector('#submitBtn')
+    .disabled = true;
+
+});
+
+
+/* =========================================================
+   SEDE → SLOT
+   ========================================================= */
+
+locationSel.addEventListener(
+'change',
+()=>{
+
+  const ids = new Set(
+
+    availabilities
+
+      .filter(
+        a =>
+        a.prestazione_id === service.value &&
+        a.sede_id === locationSel.value
+      )
+
+      .map(
+        a => a.id
+      )
+
+  );
+
+
+  const ss = slots.filter(
+    s =>
+    ids.has(s.disponibilita_id)
+  );
+
+
+  slotSel.innerHTML =
+
+    '<option value="">Seleziona data e ora</option>' +
+
+    ss.map(
+      x =>
+      `<option value="${x.id}">
+        ${fmt(x.data_ora)}
+      </option>`
+    ).join('');
+
+
+  slotSel.disabled =
+    !locationSel.value ||
+    ss.length === 0;
+
+
+  document.querySelector('#submitBtn')
+    .disabled = true;
+
+});
+
+
+/* =========================================================
+   ABILITA PULSANTE
+   ========================================================= */
+
+slotSel.addEventListener(
+'change',
+()=>{
+
+  document.querySelector('#submitBtn')
+    .disabled =
+    !slotSel.value;
+
+});
+
+
+/* =========================================================
+   INVIO
+   Per ora NON registra dati sanitari.
+   ========================================================= */
+
+document.querySelector('#booking')
+.addEventListener(
+'submit',
+e=>{
+
+  e.preventDefault();
+
+  const el =
+    document.querySelector('#formStatus');
+
+  el.className = 'status';
+
+  el.textContent =
+  'Calendario collegato correttamente. ' +
+  'L’invio della prenotazione verrà attivato nel passaggio successivo tramite una funzione sicura lato database.';
+
+});
+
+
+/* AVVIO */
+
+init();
+
+</script>
+
+</body>
+</html>
