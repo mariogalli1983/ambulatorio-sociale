@@ -632,20 +632,134 @@ slotSel.addEventListener(
    ========================================================= */
 
 document.querySelector('#booking')
-.addEventListener(
-'submit',
-e=>{
+.addEventListener('submit', async (e) => {
 
   e.preventDefault();
 
-  const el =
+  const statusEl =
     document.querySelector('#formStatus');
 
-  el.className = 'status';
+  const submitBtn =
+    document.querySelector('#submitBtn');
 
-  el.textContent =
-  'Calendario collegato correttamente. ' +
-  'L’invio della prenotazione verrà attivato nel passaggio successivo tramite una funzione sicura lato database.';
+  submitBtn.disabled = true;
+
+  statusEl.className = 'status';
+  statusEl.textContent =
+    'Registrazione della prenotazione in corso…';
+
+  const diagnosed =
+    document.querySelector('#diagnosed').value === 'yes';
+
+  const payload = {
+    p_slot_id:
+      document.querySelector('#slot').value,
+
+    p_nome:
+      document.querySelector('#first_name').value.trim(),
+
+    p_cognome:
+      document.querySelector('#last_name').value.trim(),
+
+    p_data_nascita:
+      document.querySelector('#birth_date').value,
+
+    p_email:
+      document.querySelector('#email').value.trim(),
+
+    p_telefono:
+      document.querySelector('#phone').value.trim(),
+
+    p_motivo_visita:
+      document.querySelector('#symptom').value,
+
+    p_diagnosi_accertata:
+      diagnosed,
+
+    p_diagnosi_descrizione:
+      diagnosed
+        ? document.querySelector('#diagnosis').value.trim()
+        : null
+  };
+
+  try {
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/prenota_visita`,
+      {
+        method: 'POST',
+
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+
+      let message =
+        result.message ||
+        'Non è stato possibile completare la prenotazione.';
+
+      throw new Error(message);
+    }
+
+
+    /* --------------------------------------------
+       PRENOTAZIONE RIUSCITA
+       -------------------------------------------- */
+
+    statusEl.className = 'status success';
+
+    statusEl.innerHTML = `
+      <strong>Prenotazione registrata.</strong><br><br>
+
+      Il tuo appuntamento è stato riservato correttamente.
+
+      <br><br>
+
+      <small>
+      Codice prenotazione:<br>
+      <strong>${result.prenotazione_id}</strong>
+      </small>
+    `;
+
+
+    /* togliamo immediatamente lo slot prenotato
+       dall'elenco visualizzato */
+
+    slots =
+      slots.filter(
+        s => s.id !== payload.p_slot_id
+      );
+
+
+    /* blocchiamo il form per evitare doppi invii */
+
+    document.querySelectorAll(
+      '#booking input, #booking select, #booking textarea'
+    ).forEach(
+      element => element.disabled = true
+    );
+
+
+    submitBtn.style.display = 'none';
+
+
+  } catch(error) {
+
+    statusEl.className = 'status error';
+
+    statusEl.textContent =
+      error.message;
+
+    submitBtn.disabled = false;
+  }
 
 });
 
