@@ -882,6 +882,22 @@ Annulla
 
 
 
+<!-- MODALE MODIFICA GIORNATA -->
+<div id="modificaGiornataModal" class="modal hidden"><div class="modal-box">
+<h2>Modifica giornata ambulatoriale</h2>
+<input id="modificaGiornataId" type="hidden">
+<div class="field"><label>Sede</label><select id="modificaGiornataSede"></select></div>
+<div class="field"><label>Specialista</label><select id="modificaGiornataSpecialista"></select></div>
+<div class="field"><label>Prestazione</label><select id="modificaGiornataPrestazione"></select></div>
+<div class="field"><label>Data</label><input id="modificaGiornataData" type="date"></div>
+<div class="field"><label>Ora inizio</label><input id="modificaGiornataInizio" type="time"></div>
+<div class="field"><label>Ora fine</label><input id="modificaGiornataFine" type="time"></div>
+<div class="field"><label>Durata visita (minuti)</label><select id="modificaGiornataDurata"><option value="15">15 minuti</option><option value="20">20 minuti</option><option value="30">30 minuti</option><option value="45">45 minuti</option><option value="60">60 minuti</option></select></div>
+<p class="muted">Per sicurezza, giornate con prenotazioni confermate o storico di prenotazioni non possono essere modificate strutturalmente.</p>
+<div class="top-actions"><button class="primary" onclick="salvaModificaGiornata()">Salva modifiche</button><button class="secondary" onclick="closeModal('modificaGiornataModal')">Annulla</button></div>
+<div id="modificaGiornataMessage"></div>
+</div></div>
+
 <script>
 
 /* ============================================================
@@ -1551,6 +1567,8 @@ function renderGiornate(){
 
             <div class="top-actions">
 
+              <button class="secondary" onclick="apriModificaGiornata('${d.id}')">Modifica</button>
+
               <button
                 class="secondary"
                 onclick="apriGiornata('${d.id}')">
@@ -1594,6 +1612,75 @@ function renderGiornate(){
 }
 
 
+
+/* ============================================================
+   MODIFICA GIORNATA
+   ============================================================ */
+function apriModificaGiornata(id){
+  const g=disponibilita.find(d=>d.id===id);
+  if(!g){ alert("Giornata non trovata."); return; }
+
+  const ids=new Set(slots.filter(s=>s.disponibilita_id===id).map(s=>s.id));
+  const confermate=prenotazioni.filter(p=>ids.has(p.slot_id)&&p.stato==="confermata").length;
+  if(confermate>0){
+    alert("La giornata contiene prenotazioni confermate e non può essere modificata strutturalmente.");
+    return;
+  }
+
+  const se=document.querySelector('#modificaGiornataSede');
+  const sp=document.querySelector('#modificaGiornataSpecialista');
+  const pr=document.querySelector('#modificaGiornataPrestazione');
+
+  se.innerHTML=sedi.filter(x=>x.attiva||x.id===g.sede_id).map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("");
+  sp.innerHTML=specialisti.filter(x=>x.attivo||x.id===g.specialista_id).map(x=>`<option value="${x.id}">${escapeHtml(x.nome)} ${escapeHtml(x.cognome)}</option>`).join("");
+  pr.innerHTML=prestazioni.filter(x=>x.attiva||x.id===g.prestazione_id).map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("");
+
+  document.querySelector('#modificaGiornataId').value=g.id;
+  se.value=g.sede_id||"";
+  sp.value=g.specialista_id||"";
+  pr.value=g.prestazione_id||"";
+  document.querySelector('#modificaGiornataData').value=g.data||"";
+  document.querySelector('#modificaGiornataInizio').value=formatTime(g.ora_inizio);
+  document.querySelector('#modificaGiornataFine').value=formatTime(g.ora_fine);
+  document.querySelector('#modificaGiornataDurata').value=String(g.durata_slot_minuti||20);
+  const m=document.querySelector('#modificaGiornataMessage'); m.className=""; m.textContent="";
+  openModal('modificaGiornataModal');
+}
+
+async function salvaModificaGiornata(){
+  const m=document.querySelector('#modificaGiornataMessage');
+  const payload={
+    p_disponibilita_id:document.querySelector('#modificaGiornataId').value,
+    p_sede_id:document.querySelector('#modificaGiornataSede').value,
+    p_specialista_id:document.querySelector('#modificaGiornataSpecialista').value,
+    p_prestazione_id:document.querySelector('#modificaGiornataPrestazione').value,
+    p_data:document.querySelector('#modificaGiornataData').value,
+    p_ora_inizio:document.querySelector('#modificaGiornataInizio').value,
+    p_ora_fine:document.querySelector('#modificaGiornataFine').value,
+    p_durata_slot_minuti:Number(document.querySelector('#modificaGiornataDurata').value)
+  };
+  if(Object.values(payload).some(v=>v===""||v===null)){
+    m.className="error"; m.textContent="Compila tutti i campi."; return;
+  }
+  if(payload.p_ora_fine<=payload.p_ora_inizio){
+    m.className="error"; m.textContent="L'ora di fine deve essere successiva all'ora di inizio."; return;
+  }
+  if(!confirm("Confermi la modifica? Gli slot verranno rigenerati con i nuovi dati.")) return;
+
+  m.className=""; m.textContent="Salvataggio in corso…";
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/modifica_giornata`,{
+      method:"POST",headers:authHeaders(),body:JSON.stringify(payload)
+    });
+    let x=null; try{x=await r.json()}catch(e){}
+    if(!r.ok) throw new Error(x?.message||x?.error||"Impossibile modificare la giornata.");
+    closeModal('modificaGiornataModal');
+    await loadDashboard();
+    alert("Giornata modificata correttamente.");
+  }catch(e){
+    console.error(e); m.className="error"; m.textContent=e.message;
+  }
+}
 
 /* ============================================================
    DETTAGLIO GIORNATA
