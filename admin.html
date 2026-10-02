@@ -1,0 +1,1447 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Area amministratore | Ambulatorio Sociale</title>
+
+<style>
+:root{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  color:#17202a;
+  background:#f5f7f8
+}
+*{box-sizing:border-box}
+body{margin:0}
+header{
+  background:#fff;
+  border-bottom:1px solid #e5e7eb
+}
+nav,main{
+  max-width:1200px;
+  margin:auto;
+  padding:18px 22px
+}
+nav{
+  display:flex;
+  align-items:center;
+  gap:20px
+}
+.brand{
+  font-weight:800;
+  margin-right:auto
+}
+a{color:#126e61}
+h1{margin-bottom:5px}
+.muted{color:#667085}
+.card{
+  background:white;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:22px;
+  margin:18px 0
+}
+.login{
+  max-width:450px;
+  margin:60px auto
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px
+}
+.stat{
+  font-size:2rem;
+  font-weight:800;
+  color:#126e61
+}
+.field{margin:15px 0}
+label{
+  display:block;
+  font-weight:650;
+  margin-bottom:6px
+}
+input,select{
+  width:100%;
+  padding:11px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font:inherit
+}
+button{
+  border:0;
+  border-radius:8px;
+  padding:11px 16px;
+  font-weight:700;
+  cursor:pointer
+}
+.primary{
+  background:#126e61;
+  color:white
+}
+.secondary{
+  background:#eef2f4
+}
+.danger{
+  background:#b42318;
+  color:white
+}
+.top-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px
+}
+th,td{
+  text-align:left;
+  padding:11px 8px;
+  border-bottom:1px solid #eee
+}
+th{
+  font-size:.85rem;
+  color:#667085
+}
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:20px;
+  background:#eef7f5;
+  font-size:.8rem;
+  font-weight:700
+}
+.error{
+  padding:12px;
+  background:#fff0f0;
+  color:#8a1c1c;
+  border-radius:8px;
+  margin:12px 0
+}
+.success{
+  padding:12px;
+  background:#edf9f0;
+  color:#176b35;
+  border-radius:8px;
+  margin:12px 0
+}
+.hidden{display:none!important}
+.section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px
+}
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px
+}
+.modal-box{
+  width:100%;
+  max-width:520px;
+  background:white;
+  border-radius:14px;
+  padding:24px
+}
+@media(max-width:800px){
+  .grid{grid-template-columns:1fr}
+  table{font-size:.85rem}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<nav>
+  <span class="brand">Ambulatorio Sociale</span>
+  <a href="index.html">Sito pubblico</a>
+  <button id="logoutBtn" class="secondary hidden">
+    Esci
+  </button>
+</nav>
+</header>
+
+<main>
+
+<!-- LOGIN -->
+
+<section id="loginArea" class="login card">
+
+<h1>Area riservata</h1>
+
+<p class="muted">
+Accesso amministratori Ambulatorio Sociale.
+</p>
+
+<div class="field">
+<label>Email</label>
+<input id="loginEmail" type="email">
+</div>
+
+<div class="field">
+<label>Password</label>
+<input id="loginPassword" type="password">
+</div>
+
+<button id="loginBtn" class="primary">
+Accedi
+</button>
+
+<div id="loginMessage"></div>
+
+</section>
+
+
+<!-- DASHBOARD -->
+
+<section id="dashboard" class="hidden">
+
+<h1>Dashboard</h1>
+
+<p class="muted">
+Gestione Ambulatorio Sociale
+</p>
+
+
+<div class="grid">
+
+<div class="card">
+<div class="stat" id="numPrenotazioni">–</div>
+Prenotazioni confermate
+</div>
+
+<div class="card">
+<div class="stat" id="numSedi">–</div>
+Sedi attive
+</div>
+
+<div class="card">
+<div class="stat" id="numSpecialisti">–</div>
+Specialisti attivi
+</div>
+
+</div>
+
+
+<!-- NUOVA GIORNATA -->
+
+<div class="card">
+
+<div class="section-title">
+
+<div>
+<h2>Giornate ambulatoriali</h2>
+<p class="muted">
+Crea disponibilità e slot automaticamente.
+</p>
+</div>
+
+<button
+class="primary"
+onclick="openModal('giornataModal')">
++ Nuova giornata
+</button>
+
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Sede</th>
+<th>Prestazione</th>
+<th>Orario</th>
+</tr>
+</thead>
+
+<tbody id="giornateTable"></tbody>
+
+</table>
+
+</div>
+
+
+<!-- PRENOTAZIONI -->
+
+<div class="card">
+
+<h2>Prenotazioni</h2>
+
+<p class="muted">
+Dati amministrativi degli appuntamenti.
+</p>
+
+<table>
+
+<thead>
+<tr>
+<th>Data</th>
+<th>Ora</th>
+<th>Paziente</th>
+<th>Telefono</th>
+<th>Email</th>
+<th>Stato</th>
+</tr>
+</thead>
+
+<tbody id="prenotazioniTable"></tbody>
+
+</table>
+
+</div>
+
+
+<!-- SEDI -->
+
+<div class="card">
+
+<div class="section-title">
+
+<h2>Sedi</h2>
+
+<button
+class="primary"
+onclick="openModal('sedeModal')">
++ Nuova sede
+</button>
+
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>Indirizzo</th>
+<th>Stato</th>
+</tr>
+</thead>
+
+<tbody id="sediTable"></tbody>
+
+</table>
+
+</div>
+
+
+<!-- SPECIALISTI -->
+
+<div class="card">
+
+<div class="section-title">
+
+<h2>Specialisti</h2>
+
+<button
+class="primary"
+onclick="openModal('specialistaModal')">
++ Nuovo specialista
+</button>
+
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>Qualifica</th>
+<th>Email</th>
+</tr>
+</thead>
+
+<tbody id="specialistiTable"></tbody>
+
+</table>
+
+</div>
+
+</section>
+
+</main>
+
+
+<!-- MODALE SEDE -->
+
+<div id="sedeModal" class="modal hidden">
+
+<div class="modal-box">
+
+<h2>Nuova sede</h2>
+
+<div class="field">
+<label>Nome sede</label>
+<input id="sedeNome">
+</div>
+
+<div class="field">
+<label>Indirizzo</label>
+<input id="sedeIndirizzo">
+</div>
+
+<div class="top-actions">
+
+<button
+class="primary"
+onclick="creaSede()">
+Salva
+</button>
+
+<button
+class="secondary"
+onclick="closeModal('sedeModal')">
+Annulla
+</button>
+
+</div>
+
+<div id="sedeMessage"></div>
+
+</div>
+</div>
+
+
+<!-- MODALE SPECIALISTA -->
+
+<div id="specialistaModal" class="modal hidden">
+
+<div class="modal-box">
+
+<h2>Nuovo specialista</h2>
+
+<div class="field">
+<label>Nome</label>
+<input id="specNome">
+</div>
+
+<div class="field">
+<label>Cognome</label>
+<input id="specCognome">
+</div>
+
+<div class="field">
+<label>Qualifica</label>
+<input id="specQualifica">
+</div>
+
+<div class="field">
+<label>Email</label>
+<input id="specEmail" type="email">
+</div>
+
+<div class="top-actions">
+
+<button
+class="primary"
+onclick="creaSpecialista()">
+Salva
+</button>
+
+<button
+class="secondary"
+onclick="closeModal('specialistaModal')">
+Annulla
+</button>
+
+</div>
+
+<div id="specMessage"></div>
+
+</div>
+</div>
+
+
+<!-- MODALE GIORNATA -->
+
+<div id="giornataModal" class="modal hidden">
+
+<div class="modal-box">
+
+<h2>Nuova giornata ambulatoriale</h2>
+
+<div class="field">
+<label>Sede</label>
+<select id="giornataSede"></select>
+</div>
+
+<div class="field">
+<label>Specialista</label>
+<select id="giornataSpecialista"></select>
+</div>
+
+<div class="field">
+<label>Prestazione</label>
+<select id="giornataPrestazione"></select>
+</div>
+
+<div class="field">
+<label>Data</label>
+<input id="giornataData" type="date">
+</div>
+
+<div class="field">
+<label>Ora inizio</label>
+<input id="giornataInizio" type="time">
+</div>
+
+<div class="field">
+<label>Ora fine</label>
+<input id="giornataFine" type="time">
+</div>
+
+<div class="field">
+<label>Durata visita (minuti)</label>
+
+<select id="giornataDurata">
+<option value="15">15 minuti</option>
+<option value="20" selected>20 minuti</option>
+<option value="30">30 minuti</option>
+<option value="45">45 minuti</option>
+<option value="60">60 minuti</option>
+</select>
+
+</div>
+
+<div class="top-actions">
+
+<button
+class="primary"
+onclick="creaGiornata()">
+Crea giornata
+</button>
+
+<button
+class="secondary"
+onclick="closeModal('giornataModal')">
+Annulla
+</button>
+
+</div>
+
+<div id="giornataMessage"></div>
+
+</div>
+</div>
+
+
+<script>
+
+/* ============================================================
+   CONFIGURAZIONE
+   ============================================================ */
+
+const SUPABASE_URL =
+"https://tsnpjkcubrzlxmremqbx.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_WlOXmDGGtulKr1OOsDlEWg_TEoaLpDz";
+
+
+let accessToken = null;
+
+let sedi = [];
+let specialisti = [];
+let prestazioni = [];
+let disponibilita = [];
+let slots = [];
+
+
+/* ============================================================
+   API
+   ============================================================ */
+
+function authHeaders(){
+
+  return {
+    apikey:
+      SUPABASE_KEY,
+
+    Authorization:
+      `Bearer ${accessToken}`,
+
+    "Content-Type":
+      "application/json"
+  };
+
+}
+
+
+async function api(
+  table,
+  query = ""
+){
+
+  const response =
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/${table}?${query}`,
+      {
+        headers:
+          authHeaders()
+      }
+    );
+
+
+  if(!response.ok){
+
+    throw new Error(
+      await response.text()
+    );
+
+  }
+
+
+  return response.json();
+
+}
+
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+
+document.querySelector('#loginBtn')
+.addEventListener(
+'click',
+async()=>{
+
+  const email =
+    document.querySelector('#loginEmail')
+    .value.trim();
+
+  const password =
+    document.querySelector('#loginPassword')
+    .value;
+
+
+  const message =
+    document.querySelector('#loginMessage');
+
+
+  message.innerHTML =
+    "Accesso in corso…";
+
+
+  try{
+
+    const response =
+      await fetch(
+
+        `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+
+        {
+
+          method:
+            "POST",
+
+          headers:{
+            apikey:
+              SUPABASE_KEY,
+
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              email,
+              password
+            })
+
+        }
+
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if(!response.ok){
+
+      throw new Error(
+        result.error_description ||
+        result.msg ||
+        "Credenziali non valide"
+      );
+
+    }
+
+
+    accessToken =
+      result.access_token;
+
+
+    /* Verifica effettiva ruolo admin */
+
+    const profiloResponse =
+      await fetch(
+
+        `${SUPABASE_URL}/rest/v1/profili` +
+        `?select=id,ruolo,attivo`,
+
+        {
+          headers:
+            authHeaders()
+        }
+
+      );
+
+
+    const profilo =
+      await profiloResponse.json();
+
+
+    if(
+      !profiloResponse.ok ||
+      !profilo.length ||
+      profilo[0].ruolo !== "admin" ||
+      !profilo[0].attivo
+    ){
+
+      accessToken =
+        null;
+
+      throw new Error(
+        "Utente non autorizzato all'area amministrativa."
+      );
+
+    }
+
+
+    document.querySelector('#loginArea')
+      .classList.add('hidden');
+
+    document.querySelector('#dashboard')
+      .classList.remove('hidden');
+
+    document.querySelector('#logoutBtn')
+      .classList.remove('hidden');
+
+
+    await loadDashboard();
+
+
+  }catch(error){
+
+    message.className =
+      "error";
+
+    message.textContent =
+      error.message;
+
+  }
+
+});
+
+
+/* ============================================================
+   LOGOUT
+   ============================================================ */
+
+document.querySelector('#logoutBtn')
+.addEventListener(
+'click',
+()=>{
+
+  accessToken =
+    null;
+
+  location.reload();
+
+});
+
+
+/* ============================================================
+   CARICAMENTO DASHBOARD
+   ============================================================ */
+
+async function loadDashboard(){
+
+  try{
+
+    [
+      sedi,
+      specialisti,
+      prestazioni,
+      disponibilita,
+      slots
+    ] = await Promise.all([
+
+      api(
+        "sedi",
+        "select=*&order=nome"
+      ),
+
+      api(
+        "specialisti",
+        "select=*&order=cognome"
+      ),
+
+      api(
+        "prestazioni",
+        "select=*&order=nome"
+      ),
+
+      api(
+        "disponibilita",
+        "select=*&order=data"
+      ),
+
+      api(
+        "slot",
+        "select=*&order=data_ora"
+      )
+
+    ]);
+
+
+    const prenotazioni =
+      await api(
+        "prenotazioni",
+        "select=id,slot_id,nome,cognome,email,telefono,stato,created_at&order=created_at.desc"
+      );
+
+
+    renderStats(
+      prenotazioni
+    );
+
+    renderSedi();
+
+    renderSpecialisti();
+
+    renderGiornate();
+
+    renderPrenotazioni(
+      prenotazioni
+    );
+
+    populateSelects();
+
+
+  }catch(error){
+
+    alert(
+      "Errore caricamento dashboard: " +
+      error.message
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   STATISTICHE
+   ============================================================ */
+
+function renderStats(
+  prenotazioni
+){
+
+  document.querySelector('#numPrenotazioni')
+  .textContent =
+
+    prenotazioni
+    .filter(
+      p => p.stato === "confermata"
+    )
+    .length;
+
+
+  document.querySelector('#numSedi')
+  .textContent =
+
+    sedi
+    .filter(
+      s => s.attiva
+    )
+    .length;
+
+
+  document.querySelector('#numSpecialisti')
+  .textContent =
+
+    specialisti
+    .filter(
+      s => s.attivo
+    )
+    .length;
+
+}
+
+
+/* ============================================================
+   SEDI
+   ============================================================ */
+
+function renderSedi(){
+
+  document.querySelector('#sediTable')
+  .innerHTML =
+
+    sedi.map(
+      s => `
+
+<tr>
+
+<td>
+${escapeHtml(s.nome)}
+</td>
+
+<td>
+${escapeHtml(s.indirizzo || "—")}
+</td>
+
+<td>
+<span class="badge">
+${s.attiva ? "Attiva" : "Disattivata"}
+</span>
+</td>
+
+</tr>
+
+`
+    ).join("");
+
+}
+
+
+/* ============================================================
+   SPECIALISTI
+   ============================================================ */
+
+function renderSpecialisti(){
+
+  document.querySelector('#specialistiTable')
+  .innerHTML =
+
+    specialisti.map(
+      s => `
+
+<tr>
+
+<td>
+${escapeHtml(s.nome)}
+${escapeHtml(s.cognome)}
+</td>
+
+<td>
+${escapeHtml(s.qualifica || "—")}
+</td>
+
+<td>
+${escapeHtml(s.email || "—")}
+</td>
+
+</tr>
+
+`
+    ).join("");
+
+}
+
+
+/* ============================================================
+   GIORNATE
+   ============================================================ */
+
+function renderGiornate(){
+
+  document.querySelector('#giornateTable')
+  .innerHTML =
+
+    disponibilita.map(
+      d => {
+
+        const sede =
+          sedi.find(
+            x => x.id === d.sede_id
+          );
+
+        const prestazione =
+          prestazioni.find(
+            x => x.id === d.prestazione_id
+          );
+
+        return `
+
+<tr>
+
+<td>
+${formatDate(d.data)}
+</td>
+
+<td>
+${escapeHtml(sede?.nome || "—")}
+</td>
+
+<td>
+${escapeHtml(prestazione?.nome || "—")}
+</td>
+
+<td>
+${d.ora_inizio.slice(0,5)}
+–
+${d.ora_fine.slice(0,5)}
+</td>
+
+</tr>
+
+`;
+
+      }
+
+    ).join("");
+
+}
+
+
+/* ============================================================
+   PRENOTAZIONI
+   ============================================================ */
+
+function renderPrenotazioni(
+  prenotazioni
+){
+
+  document.querySelector('#prenotazioniTable')
+  .innerHTML =
+
+    prenotazioni.map(
+      p => {
+
+        const slot =
+          slots.find(
+            s => s.id === p.slot_id
+          );
+
+
+        const data =
+          slot
+          ? new Date(slot.data_ora)
+          : null;
+
+
+        return `
+
+<tr>
+
+<td>
+${
+  data
+  ? data.toLocaleDateString(
+      "it-IT",
+      {timeZone:"Europe/Rome"}
+    )
+  : "—"
+}
+</td>
+
+<td>
+${
+  data
+  ? data.toLocaleTimeString(
+      "it-IT",
+      {
+        hour:"2-digit",
+        minute:"2-digit",
+        timeZone:"Europe/Rome"
+      }
+    )
+  : "—"
+}
+</td>
+
+<td>
+${escapeHtml(p.nome)}
+${escapeHtml(p.cognome)}
+</td>
+
+<td>
+${escapeHtml(p.telefono || "—")}
+</td>
+
+<td>
+${escapeHtml(p.email)}
+</td>
+
+<td>
+<span class="badge">
+${escapeHtml(p.stato)}
+</span>
+</td>
+
+</tr>
+
+`;
+
+      }
+
+    ).join("");
+
+}
+
+
+/* ============================================================
+   CREA SEDE
+   ============================================================ */
+
+async function creaSede(){
+
+  const nome =
+    document.querySelector('#sedeNome')
+    .value.trim();
+
+  const indirizzo =
+    document.querySelector('#sedeIndirizzo')
+    .value.trim();
+
+
+  if(!nome){
+
+    alert(
+      "Inserisci il nome della sede."
+    );
+
+    return;
+  }
+
+
+  const response =
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/sedi`,
+      {
+
+        method:
+          "POST",
+
+        headers:{
+          ...authHeaders(),
+          Prefer:
+            "return=representation"
+        },
+
+        body:
+          JSON.stringify({
+            nome,
+            indirizzo:
+              indirizzo || null
+          })
+
+      }
+    );
+
+
+  if(!response.ok){
+
+    alert(
+      await response.text()
+    );
+
+    return;
+  }
+
+
+  closeModal(
+    'sedeModal'
+  );
+
+
+  await loadDashboard();
+
+}
+
+
+/* ============================================================
+   CREA SPECIALISTA
+   ============================================================ */
+
+async function creaSpecialista(){
+
+  const payload = {
+
+    nome:
+      document.querySelector('#specNome')
+      .value.trim(),
+
+    cognome:
+      document.querySelector('#specCognome')
+      .value.trim(),
+
+    qualifica:
+      document.querySelector('#specQualifica')
+      .value.trim() || null,
+
+    email:
+      document.querySelector('#specEmail')
+      .value.trim() || null
+
+  };
+
+
+  if(
+    !payload.nome ||
+    !payload.cognome
+  ){
+
+    alert(
+      "Nome e cognome sono obbligatori."
+    );
+
+    return;
+
+  }
+
+
+  const response =
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/specialisti`,
+      {
+
+        method:
+          "POST",
+
+        headers:{
+          ...authHeaders(),
+          Prefer:
+            "return=representation"
+        },
+
+        body:
+          JSON.stringify(payload)
+
+      }
+    );
+
+
+  if(!response.ok){
+
+    alert(
+      await response.text()
+    );
+
+    return;
+  }
+
+
+  closeModal(
+    'specialistaModal'
+  );
+
+
+  await loadDashboard();
+
+}
+
+
+/* ============================================================
+   CREA GIORNATA
+   ============================================================ */
+
+async function creaGiornata(){
+
+  const payload = {
+
+    sede_id:
+      document.querySelector('#giornataSede')
+      .value,
+
+    specialista_id:
+      document.querySelector('#giornataSpecialista')
+      .value,
+
+    prestazione_id:
+      document.querySelector('#giornataPrestazione')
+      .value,
+
+    data:
+      document.querySelector('#giornataData')
+      .value,
+
+    ora_inizio:
+      document.querySelector('#giornataInizio')
+      .value,
+
+    ora_fine:
+      document.querySelector('#giornataFine')
+      .value,
+
+    durata_slot_minuti:
+      Number(
+        document.querySelector('#giornataDurata')
+        .value
+      )
+
+  };
+
+
+  if(
+    !payload.sede_id ||
+    !payload.specialista_id ||
+    !payload.prestazione_id ||
+    !payload.data ||
+    !payload.ora_inizio ||
+    !payload.ora_fine
+  ){
+
+    alert(
+      "Compila tutti i campi."
+    );
+
+    return;
+
+  }
+
+
+  const response =
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/disponibilita`,
+      {
+
+        method:
+          "POST",
+
+        headers:{
+          ...authHeaders(),
+          Prefer:
+            "return=representation"
+        },
+
+        body:
+          JSON.stringify(payload)
+
+      }
+    );
+
+
+  if(!response.ok){
+
+    alert(
+      await response.text()
+    );
+
+    return;
+  }
+
+
+  closeModal(
+    'giornataModal'
+  );
+
+
+  await loadDashboard();
+
+}
+
+
+/* ============================================================
+   SELECT
+   ============================================================ */
+
+function populateSelects(){
+
+  document.querySelector('#giornataSede')
+  .innerHTML =
+
+    sedi
+    .filter(s => s.attiva)
+    .map(
+      s =>
+      `<option value="${s.id}">
+      ${escapeHtml(s.nome)}
+      </option>`
+    )
+    .join("");
+
+
+  document.querySelector('#giornataSpecialista')
+  .innerHTML =
+
+    specialisti
+    .filter(s => s.attivo)
+    .map(
+      s =>
+      `<option value="${s.id}">
+      ${escapeHtml(s.nome)}
+      ${escapeHtml(s.cognome)}
+      </option>`
+    )
+    .join("");
+
+
+  document.querySelector('#giornataPrestazione')
+  .innerHTML =
+
+    prestazioni
+    .filter(p => p.attiva)
+    .map(
+      p =>
+      `<option value="${p.id}">
+      ${escapeHtml(p.nome)}
+      </option>`
+    )
+    .join("");
+
+}
+
+
+/* ============================================================
+   MODALI
+   ============================================================ */
+
+function openModal(id){
+
+  document
+  .getElementById(id)
+  .classList.remove('hidden');
+
+}
+
+
+function closeModal(id){
+
+  document
+  .getElementById(id)
+  .classList.add('hidden');
+
+}
+
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+
+function formatDate(value){
+
+  const [y,m,d] =
+    value.split("-");
+
+  return `${d}/${m}/${y}`;
+
+}
+
+
+function escapeHtml(value){
+
+  return String(value ?? "")
+
+  .replaceAll("&","&amp;")
+  .replaceAll("<","&lt;")
+  .replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;")
+  .replaceAll("'","&#039;");
+
+}
+
+</script>
+
+</body>
+</html>
