@@ -645,13 +645,17 @@ document.querySelector('#booking')
   submitBtn.disabled = true;
 
   statusEl.className = 'status';
+
   statusEl.textContent =
     'Registrazione della prenotazione in corso…';
+
 
   const diagnosed =
     document.querySelector('#diagnosed').value === 'yes';
 
+
   const payload = {
+
     p_slot_id:
       document.querySelector('#slot').value,
 
@@ -680,85 +684,254 @@ document.querySelector('#booking')
       diagnosed
         ? document.querySelector('#diagnosis').value.trim()
         : null
+
   };
+
 
   try {
 
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/rpc/prenota_visita`,
-      {
-        method: 'POST',
+    /* ======================================================
+       1. REGISTRAZIONE PRENOTAZIONE
+       ====================================================== */
 
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
+    const response =
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/rpc/prenota_visita`,
+        {
 
-        body: JSON.stringify(payload)
-      }
-    );
+          method:
+            'POST',
 
-    const result = await response.json();
+          headers: {
+            ...headers,
+            'Content-Type':
+              'application/json'
+          },
 
-    if (!response.ok) {
+          body:
+            JSON.stringify(payload)
 
-      let message =
-        result.message ||
-        'Non è stato possibile completare la prenotazione.';
-
-      throw new Error(message);
-    }
-
-
-    /* --------------------------------------------
-       PRENOTAZIONE RIUSCITA
-       -------------------------------------------- */
-
-    statusEl.className = 'status success';
-
-    statusEl.innerHTML = `
-      <strong>Prenotazione registrata.</strong><br><br>
-
-      Il tuo appuntamento è stato riservato correttamente.
-
-      <br><br>
-
-      <small>
-      Codice prenotazione:<br>
-      <strong>${result.prenotazione_id}</strong>
-      </small>
-    `;
-
-
-    /* togliamo immediatamente lo slot prenotato
-       dall'elenco visualizzato */
-
-    slots =
-      slots.filter(
-        s => s.id !== payload.p_slot_id
+        }
       );
 
 
-    /* blocchiamo il form per evitare doppi invii */
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.message ||
+        'Non è stato possibile completare la prenotazione.'
+      );
+
+    }
+
+
+    /*
+     * Da questo momento la prenotazione ESISTE.
+     *
+     * Un eventuale problema email NON deve quindi
+     * indurre l'utente a prenotare nuovamente.
+     */
+
+
+    /* ======================================================
+       2. INVIO AUTOMATICO EMAIL
+       ====================================================== */
+
+    statusEl.textContent =
+      'Prenotazione registrata. Invio della conferma email…';
+
+
+    let emailConfermaInviata =
+      false;
+
+
+    try {
+
+      const emailResponse =
+        await fetch(
+
+          `${SUPABASE_URL}/functions/v1/invia-conferma-prenotazione`,
+
+          {
+
+            method:
+              'POST',
+
+            headers: {
+              ...headers,
+
+              'Content-Type':
+                'application/json'
+            },
+
+            body:
+              JSON.stringify({
+
+                prenotazione_id:
+                  result.prenotazione_id,
+
+                token_email:
+                  result.token_email
+
+              })
+
+          }
+
+        );
+
+
+      const emailResult =
+        await emailResponse.json();
+
+
+      if (
+        emailResponse.ok &&
+        emailResult.ok
+      ) {
+
+        emailConfermaInviata =
+          true;
+
+      } else {
+
+        console.error(
+          'Invio email non riuscito:',
+          emailResult
+        );
+
+      }
+
+
+    } catch(emailError) {
+
+      console.error(
+        'Errore durante invio email:',
+        emailError
+      );
+
+    }
+
+
+    /* ======================================================
+       3. RIMUOVIAMO LO SLOT DALLA PAGINA
+       ====================================================== */
+
+    slots =
+      slots.filter(
+        s =>
+          s.id !== payload.p_slot_id
+      );
+
+
+    /* ======================================================
+       4. MESSAGGIO FINALE
+       ====================================================== */
+
+    statusEl.className =
+      'status success';
+
+
+    if (
+      emailConfermaInviata
+    ) {
+
+      statusEl.innerHTML = `
+
+        <strong>
+        Prenotazione confermata.
+        </strong>
+
+        <br><br>
+
+        Il tuo appuntamento è stato
+        riservato correttamente.
+
+        <br><br>
+
+        📧 Abbiamo inviato una
+        <strong>email di conferma</strong>
+        all'indirizzo indicato.
+
+        <br><br>
+
+        Nell'email troverai anche il pulsante
+        per annullare l'appuntamento
+        qualora non potessi più partecipare.
+
+      `;
+
+    } else {
+
+      statusEl.innerHTML = `
+
+        <strong>
+        Prenotazione confermata.
+        </strong>
+
+        <br><br>
+
+        Il tuo appuntamento è stato
+        <strong>regolarmente registrato</strong>.
+
+        <br><br>
+
+        ⚠️ Non siamo però riusciti a inviare
+        l'email di conferma.
+
+        <br><br>
+
+        <strong>
+        Non effettuare una seconda prenotazione.
+        </strong>
+
+      `;
+
+    }
+
+
+    /* ======================================================
+       5. BLOCCO DEL FORM
+       ====================================================== */
 
     document.querySelectorAll(
-      '#booking input, #booking select, #booking textarea'
-    ).forEach(
-      element => element.disabled = true
+      '#booking input, ' +
+      '#booking select, ' +
+      '#booking textarea'
+    )
+
+    .forEach(
+      element =>
+        element.disabled = true
     );
 
 
-    submitBtn.style.display = 'none';
+    submitBtn.style.display =
+      'none';
 
 
   } catch(error) {
 
-    statusEl.className = 'status error';
+    /*
+     * Arriviamo qui soltanto se è fallita
+     * la PRENOTAZIONE, non se è fallita
+     * semplicemente l'email.
+     */
+
+    statusEl.className =
+      'status error';
+
 
     statusEl.textContent =
       error.message;
 
-    submitBtn.disabled = false;
+
+    submitBtn.disabled =
+      false;
+
   }
 
 });
